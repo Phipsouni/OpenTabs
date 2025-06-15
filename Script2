@@ -1,0 +1,141 @@
+// --- Вспомогательная функция для ожидания элементов ---
+// Это крайне важно, так как элементы могут появляться на странице с задержкой.
+function waitForElement(selector, maxAttempts = 15, interval = 300) {
+    return new Promise((resolve, reject) => {
+        let attempts = 0;
+        const checkElement = () => {
+            const element = document.querySelector(selector);
+            if (element) {
+                resolve(element);
+            } else if (attempts < maxAttempts) {
+                attempts++;
+                setTimeout(checkElement, interval);
+            } else {
+                reject(new Error(`Элемент "${selector}" не найден после ${maxAttempts} попыток (${maxAttempts * interval / 1000} секунд).`));
+            }
+        };
+        checkElement();
+    });
+}
+
+// --- Основная логика скрипта для автоматизации формы ---
+async function automateFormInteraction() {
+    console.log("🚀 Запуск автоматизации формы...");
+
+    try {
+        // --- Шаг 0: Нажать на основную кнопку (как вы уже успешно сделали) ---
+        // Если этот шаг уже выполнен, можете закомментировать его или удалить.
+        console.log("Нажатие на 'Печатная форма (СМГС (2015))'...");
+        const targetTitleBtn = "Печатная форма (СМГС (2015))";
+        const targetClassBtn = "xm-tabsheet-caption-text";
+        const mainButton = await waitForElement(`div.${targetClassBtn}[title="${targetTitleBtn}"]`);
+        mainButton.click();
+        console.log(`✅ Кнопка "${targetTitleBtn}" нажата.`);
+        await new Promise(r => setTimeout(r, 1000)); // Даем время для загрузки новой формы/окна
+
+        // --- Вспомогательная функция для клика по чекбоксу через label text ---
+        const clickCheckboxByLabelText = async (labelText) => {
+            console.log(`🔎 Поиск чекбокса для: '${labelText}'...`);
+            // Ждем появления хотя бы одного label, чтобы начать поиск
+            await waitForElement('label.xm-gui-labeled-object-label', 20, 100);
+
+            // Ищем все подходящие label элементы на странице
+            const allLabels = document.querySelectorAll('label.xm-gui-labeled-object-label');
+            let targetLabel = null;
+            for (const label of allLabels) {
+                // Используем includes() для гибкости, но trim() для очистки пробелов
+                if (label.textContent.trim().includes(labelText)) {
+                    targetLabel = label;
+                    break;
+                }
+            }
+
+            if (targetLabel) {
+                // Ищем input[type="checkbox"] внутри найденного label
+                const checkboxInput = targetLabel.querySelector('input[type="checkbox"].xm-checkbox__input');
+                if (checkboxInput) {
+                    checkboxInput.click();
+                    console.log(`✅ Чекбокс для '${labelText}' нажат.`);
+                } else {
+                    console.warn(`⚠️ Input-чекбокс не найден внутри label для '${labelText}'.`);
+                }
+            } else {
+                console.error(`❌ Label с текстом '${labelText}' не найден на странице.`);
+            }
+            await new Promise(r => setTimeout(r, 300)); // Пауза после каждого действия с чекбоксом
+        };
+
+        // --- Шаг 1: Нажать на чекбокс "Впечатывать графы 33-34" ---
+        await clickCheckboxByLabelText('Впечатывать графы 33-34');
+
+        // --- Шаг 2: Нажать на чекбокс "Печатать дополнительные экземпляры дорожной ведомости" ---
+        await clickCheckboxByLabelText('Печатать дополнительные экземпляры дорожной ведомости');
+
+        // --- Шаг 3: Заполнить поле "Количество дополнительных экземпляров дорожной ведомости" ---
+        console.log("✍️ Заполнение поля 'Количество дополнительных экземпляров дорожной ведомости'...");
+        const label3Text = 'Количество дополнительных экземпляров дорожной ведомости';
+        await waitForElement('label.xm-gui-labeled-object-label', 20, 100); // Убеждаемся, что label'ы загружены
+        
+        let targetLabelForInput = null;
+        const allLabelsForInput = document.querySelectorAll('label.xm-gui-labeled-object-label');
+        for (const label of allLabelsForInput) {
+            if (label.textContent.trim().includes(label3Text)) {
+                targetLabelForInput = label;
+                break;
+            }
+        }
+
+        if (targetLabelForInput) {
+            // Ищем поле ввода, которое обычно является соседним элементом для label
+            const inputField = targetLabelForInput.nextElementSibling;
+            // Проверяем, что это действительно input и имеет нужный класс
+            if (inputField && inputField.tagName === 'INPUT' && inputField.classList.contains('xm-edit')) {
+                inputField.value = '3';
+                // Важно: для SPA-приложений может потребоваться инициировать событие ввода
+                inputField.dispatchEvent(new Event('input', { bubbles: true }));
+                inputField.dispatchEvent(new Event('change', { bubbles: true }));
+                console.log(`✅ В поле '${label3Text}' введено '3'.`);
+            } else {
+                console.warn(`⚠️ Поле ввода не найдено рядом с label для '${label3Text}'.`);
+            }
+        } else {
+            console.error(`❌ Label с текстом '${label3Text}' не найден на странице.`);
+        }
+        await new Promise(r => setTimeout(r, 300));
+
+        // --- Шаг 4: Нажать на чекбокс "Дополнительные экземпляры дорожной ведомости" ---
+        await clickCheckboxByLabelText('Дополнительные экземпляры дорожной ведомости');
+
+        // --- Шаг 5: Нажать кнопку "ОК" (первую) ---
+        console.log("🔘 Нажатие первой кнопки 'ОК'...");
+        const okButton1 = await waitForElement('span.button__caption.js-button-caption');
+        if (okButton1 && okButton1.textContent.trim() === 'ОК') {
+            okButton1.click();
+            console.log("✅ Первая кнопка 'ОК' нажата.");
+        } else {
+            console.error("❌ Первая кнопка 'ОК' не найдена.");
+        }
+        await new Promise(r => setTimeout(r, 1500)); // Увеличена пауза для ожидания диалогового окна
+
+        // --- Шаг 6: Диалоговое окно "Построение оборотной стороны" и кнопка "ОК" в нем ---
+        console.log("⏳ Ожидание диалогового окна 'Построение оборотной стороны'...");
+        await waitForElement('div.dialog-title.js-dialog-title[title="Построение оборотной стороны"]', 10, 500); // Меньше попыток, но дольше интервал, если окно появляется медленно
+        console.log("✅ Диалоговое окно найдено. Поиск кнопки 'ОК' в нем...");
+
+        const okButton2 = await waitForElement('button.xm-object.xm-button[xm-caption="ОК"]');
+        if (okButton2 && okButton2.textContent.trim() === 'ОК') {
+            okButton2.click();
+            console.log("✅ Кнопка 'ОК' в диалоговом окне 'Построение оборотной стороны' нажата.");
+        } else {
+            console.error("❌ Кнопка 'ОК' в диалоговом окне не найдена.");
+        }
+
+        console.log("🎉 Все шаги выполнены успешно!");
+
+    } catch (error) {
+        console.error("🚨 Произошла ошибка в процессе автоматизации:", error.message);
+    }
+}
+
+// --- Запускаем основную функцию автоматизации ---
+automateFormInteraction();
