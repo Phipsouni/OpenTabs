@@ -1,0 +1,26 @@
+// Вставьте сюда ваши ссылки, каждая на новой строке, внутри обратных кавычек (`)
+// Или просто скопируйте их из текстового файла и вставьте между кавычками.
+const linksString = `
+https://www.google.com
+https://www.bing.com
+https://www.yahoo.com
+https://www.example.com/page1
+https://www.example.com/page2
+https://www.github.com
+https://www.stackoverflow.com
+https://www.reddit.com
+https://www.wikipedia.org
+https://www.microsoft.com
+`;
+
+// Разделяем строку на отдельные ссылки и фильтруем пустые строки
+const links = linksString.split('\n').map(link => link.trim()).filter(link => link !== '');
+
+// Открываем каждую ссылку в новой вкладке
+links.forEach(link => {
+    if (link) { // Убедимся, что ссылка не пустая
+        window.open(link, '_blank');
+    }
+});
+
+console.log(`Открыто ${links.length} ссылок.`);
